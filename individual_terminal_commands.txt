@@ -1,0 +1,19 @@
+Manual Compilation Steps
+
+    Compile MaterialDatabase: g++ -std=c++17 -c src\MaterialDatabase.cpp -o MaterialDatabase.o
+
+    Compile FatigueDesign: g++ -std=c++17 -c src\FatigueDesign.cpp -o FatigueDesign.o
+
+    Compile RigidityDesign: g++ -std=c++17 -c src\RigidityDesign.cpp -o RigidityDesign.o
+
+    Compile StandardShaft: g++ -std=c++17 -c src\StandardShaft.cpp -o StandardShaft.o
+
+    Compile DesignReport: g++ -std=c++17 -c src\DesignReport.cpp -o DesignReport.o
+
+    Compile Main: g++ -std=c++17 -c src\main.cpp -o main.o
+
+Linking and Execution
+
+    Link into an Executable: g++ main.o MaterialDatabase.o FatigueDesign.o RigidityDesign.o StandardShaft.o DesignReport.o -o shaft_designer.exe
+
+    Run the Program: .\shaft_designer.exe
