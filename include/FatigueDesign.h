@@ -3,10 +3,5 @@
 
 class FatigueDesign {
     public:
-        static double calculateRequiredDiameter(
-            double M_min, double M_max, 
-            double T_min, double T_max, 
-            const Material& mat, double factorOfSafety,
-            double& out_dfatigue, double& out_dyield
-        );
+        static double calculateRequiredDiameter(double M_min, double M_max, double T_min, double T_max, double P_min, double P_max, const Material& mat, double factorOfSafety,double& out_dfatigue, double& out_dyield);
 };
