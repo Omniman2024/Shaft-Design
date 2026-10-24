@@ -2,26 +2,21 @@
 #include <string>
 #include <vector>
 
-struct Material {
+struct Material { // members of struct are public by default
     int id;
     std::string name;
-    double Sut; // Ultimate tensile strength (MPa)
-    double Sy;  // Yield strength (MPa)
-    double Se;  // Endurance limit (MPa)
-    double G;   // Shear modulus (GPa)
+    double Sut; 
+    double Sy;  
+    double Se; 
+    double G;  
 };
 
 class MaterialDatabase {
-private:
-    std::vector<Material> materials;
+    private:
+        std::vector<Material> materials; // encapsulation
 
-public:
-    // Loads materials from the specified CSV file path
-    bool loadDatabase(const std::string& filepath);
-    
-    // Displays all loaded materials to the terminal
-    void displayMaterials() const;
-    
-    // Retrieves a material by its ID. Returns true if found.
-    bool getMaterialById(int id, Material& outMaterial) const;
+    public:
+        bool loadDatabase(const std::string& filepath); // abstraction
+        void displayMaterials() const; // read-only
+        bool getMaterialById(int id, Material& outMaterial) const; // read-only abstraction
 };
