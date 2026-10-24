@@ -3,30 +3,23 @@
 #include <fstream>
 #include <sstream>
 
-bool MaterialDatabase::loadDatabase(const std::string& filepath) {
+bool MaterialDatabase::loadDatabase(const std::string& filepath) { // INPUT : file path , OUTPUT : bool
     std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "Error: Could not open material database at " << filepath << "\n";
         return false;
     }
-
     std::string line;
     bool isHeader = true;
-
     while (std::getline(file, line)) {
-        // Skip header
         if (isHeader) {
             isHeader = false;
             continue;
         }
-
-        // Skip empty lines
         if (line.empty()) continue;
-
         std::stringstream ss(line);
         std::string token;
         Material mat;
-
         try {
             std::getline(ss, token, ','); mat.id = std::stoi(token);
             std::getline(ss, token, ','); mat.name = token;
@@ -34,16 +27,16 @@ bool MaterialDatabase::loadDatabase(const std::string& filepath) {
             std::getline(ss, token, ','); mat.Sy = std::stod(token);
             std::getline(ss, token, ','); mat.Se = std::stod(token);
             std::getline(ss, token, ','); mat.G = std::stod(token);
-            
             materials.push_back(mat);
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e) {
             std::cerr << "Warning: Skipping malformed line in CSV -> " << line << "\n";
         }
     }
     return true;
 }
 
-void MaterialDatabase::displayMaterials() const {
+void MaterialDatabase::displayMaterials() const { // const guarantees no modification of class data will happen
     std::cout << "\n--- Available Materials ---\n";
     std::cout << "ID\tName\t\tSut(MPa)\tSy(MPa)\t\tSe(MPa)\t\tG(GPa)\n";
     std::cout << "----------------------------------------------------------------------\n";
@@ -62,5 +55,5 @@ bool MaterialDatabase::getMaterialById(int id, Material& outMaterial) const {
             return true;
         }
     }
-    return false;
+    return false; // requested ID doesn't exist in database
 }
