@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iomanip>
 #include <algorithm>
+#include <string>
 
 constexpr double PI = 3.14159265358979323846;
 
@@ -47,15 +48,79 @@ void DesignReport::generateReport(
     
     std::cout << "Req. Outer Dia (Strength) : " << d_strength_do << " mm\n";
     std::cout << "Req. Outer Dia (Rigidity) : " << d_rigidity_do << " mm\n";
+    
+    bool isRigidityGoverning = false;
+    if (hollowMode == 2) {
+        if (d_rigidity_do < d_strength_do) isRigidityGoverning = true;
+    } else {
+        if (d_rigidity_do > d_strength_do) isRigidityGoverning = true;
+    }
+
     std::cout << "Governing Theo. Outer Dia : " << d_req_do << " mm\n";
     if (shaftConf == 2) {
         std::cout << "Governing Theo. Inner Dia : " << d_req_di << " mm\n";
     }
+    
+    std::string specificGoverningLimit = "Unknown Limit";
+    
+    // Calculate hollow ratio for theoretical required diameter
+    double test_k = 0.0;
+    if (shaftConf == 2) {
+        test_k = (hollowMode == 2 && d_req_do > 0) ? (d_req_di / d_req_do) : 
+                 ((d_req_do > 0) ? (d_req_di / d_req_do) : 0.0);
+    }
+    
+    if (isRigidityGoverning) {
+        specificGoverningLimit = "RIGIDITY limit constraint (Max Twist)";
+        std::cout << "Governing Limit Phase     : " << specificGoverningLimit << "\n";
+    } else if (mode == 1) {
+        double area_f = PI * d_req_do * d_req_do * (1.0 - test_k*test_k);
+        double polar_f = PI * std::pow(d_req_do, 3) * (1.0 - std::pow(test_k, 4));
+        
+        if (polar_f > 0 && area_f > 0) {
+            double sa = (32.0 * M_a) / polar_f + (4.0 * s_a) / area_f;
+            double sm = (32.0 * M_m) / polar_f + (4.0 * s_m) / area_f;
+            double ta = (16.0 * T_a) / polar_f;
+            double tm = (16.0 * T_m) / polar_f;
+            
+            double sae = std::sqrt(sa * sa + 3.0 * ta * ta);
+            double sme = (sm / 2.0) + std::sqrt(std::pow(sm / 2.0, 2) + tm * tm);
+            
+            double f_fos = 1.0 / ((sae / mat.Se) + (sme / mat.Sut));
+            double y_fos = mat.Sy / (sae + sme);
+            
+            if (y_fos < f_fos) specificGoverningLimit = "Langer YIELD limit constraint (Plasticity)";
+            else specificGoverningLimit = "Modified GOODMAN limit constraint (Fatigue)";
+        } else {
+            specificGoverningLimit = "Instant Structural Collapse (Pre-Check Failed)";
+        }
+    } else {
+        // ASME Code diagnostic using the correct hollow shaft geometry modifier
+        double axial_term = (std::abs(peak_P) * d_req_do * (1.0 + test_k * test_k)) / 8.0; 
+        double bending_term = Kb * (peak_M * 1000.0);
+        double torsion_term = Kt * (peak_T * 1000.0);
+        
+        if (axial_term > bending_term * 2.0 && axial_term > torsion_term * 2.0) {
+            specificGoverningLimit = "ASME Code limit constraint (Axial Collapse)";
+        } else if (bending_term > torsion_term * 1.5 && bending_term > axial_term * 1.5) {
+            specificGoverningLimit = "ASME Code limit constraint (Bending Dominated)";
+        } else if (torsion_term > bending_term * 1.5 && torsion_term > axial_term * 1.5) {
+            specificGoverningLimit = "ASME Code limit constraint (Torsion Dominated)";
+        } else {
+            specificGoverningLimit = "ASME Code limit constraint (Combined Bending & Torsion)";
+        }
+    }
+    
     std::cout << "\n";
 
     if (d_std_do < 0) {
         std::cout << "!!! DESIGN REJECTED !!!\n";
-        std::cout << "Reason: Governing theoretical outer diameter (" << d_req_do << " mm) exceeds max allowable constraint (" << d_max << " mm).\n";
+        if (shaftConf == 2 && hollowMode == 2 && mode == 1 && specificGoverningLimit != "RIGIDITY limit constraint (Max Twist)") {
+            std::cout << "Reason: PRE-CHECK REJECT. A solid " << d_req_do << " mm shaft structurally fails before inner bore optimization.\n";
+        } else {
+            std::cout << "Reason: Required theoretical outer diameter (" << d_req_do << " mm) exceeds max allowable constraint (" << d_max << " mm).\n";
+        }
+        std::cout << "Bottleneck: Design restricted by " << specificGoverningLimit << ".\n";
         std::cout << "=========================================================\n";
         return;
     }
@@ -72,6 +137,13 @@ void DesignReport::generateReport(
     std::cout << "Selected Std. Outer Dia   : " << d_std_do << " mm\n";
     if (shaftConf == 2) {
         std::cout << "Corresponding Inner Dia   : " << d_std_di << " mm (Ratio k=" << k << ")\n";
+        if (hollowMode == 1) std::cout << "Optimization Profile      : Fixed Inner Bore, Scaled Outer Dia\n";
+        else if (hollowMode == 2) std::cout << "Optimization Profile      : Fixed Outer Dia, Maximized Inner Bore\n";
+        else if (hollowMode == 3) std::cout << "Optimization Profile      : Uniformly Scaled (Fixed Ratio)\n";
+    }
+
+    if (isRigidityGoverning) {
+        std::cout << "Overall Governing Limit   : RIGIDITY Constraint (Max Twist)\n";
     }
 
     if (mode == 1) {
@@ -91,16 +163,40 @@ void DesignReport::generateReport(
         double governing_FoS = std::min(achieved_fatigue_FoS, achieved_yield_FoS);
         
         std::cout << "Achieved FoS              : " << governing_FoS << " (Target: " << FoS << ")\n";
-        std::cout << "Fatigue Check             : VERIFIED via Explicit Hollow Stress\n";
+        
+        if (achieved_yield_FoS < achieved_fatigue_FoS) {
+            std::cout << (isRigidityGoverning ? "Secondary Strength Limit  : " : "Strength Governing Limit  : ") << "Langer YIELD Line (Plasticity)\n";
+            std::cout << "Yield Check               : VERIFIED via Explicit " 
+                      << (shaftConf == 1 ? "Solid" : "Hollow") << " Stress\n";
+        } else {
+            std::cout << (isRigidityGoverning ? "Secondary Strength Limit  : " : "Strength Governing Limit  : ") << "Modified GOODMAN Line (Fatigue)\n";
+            std::cout << "Fatigue Check             : VERIFIED via Explicit " 
+                      << (shaftConf == 1 ? "Solid" : "Hollow") << " Goodman Stress\n";
+        }
     } 
     else {
         double tau_allow = std::min(0.30 * mat.Sy, 0.18 * mat.Sut);
         if (hasKeyway) tau_allow *= 0.75;
         
-        double bending_term = Kb * (peak_M * 1000.0) + (std::abs(peak_P) * d_std_do * (1.0 + k2)) / 8.0;
+        double pure_bending = Kb * (peak_M * 1000.0);
+        double pure_axial = (std::abs(peak_P) * d_std_do * (1.0 + k2)) / 8.0;
         double torsion_term = Kt * (peak_T * 1000.0);
-        double tau_actual = (16.0 / (PI * std::pow(d_std_do, 3) * (1.0 - k4))) * std::sqrt(bending_term * bending_term + torsion_term * torsion_term);
         
+        double combined_bending = pure_bending + pure_axial;
+        double tau_actual = (16.0 / (PI * std::pow(d_std_do, 3) * (1.0 - k4))) * std::sqrt(combined_bending * combined_bending + torsion_term * torsion_term);
+        
+        std::string asme_diagnostic;
+        if (pure_axial > pure_bending * 2.0 && pure_axial > torsion_term * 2.0) {
+            asme_diagnostic = "Axial Collapse";
+        } else if (pure_bending > torsion_term * 1.5 && pure_bending > pure_axial * 1.5) {
+            asme_diagnostic = "Bending Dominated";
+        } else if (torsion_term > pure_bending * 1.5 && torsion_term > pure_axial * 1.5) {
+            asme_diagnostic = "Torsion Dominated";
+        } else {
+            asme_diagnostic = "Combined Shear";
+        }
+        
+        std::cout << (isRigidityGoverning ? "Secondary Strength Limit  : " : "Strength Governing Limit  : ") << "ASME Code (" << asme_diagnostic << ")\n";
         std::cout << "Max Shear Stress          : " << tau_actual << " MPa (Allowable: " << tau_allow << " MPa)\n";
     }
     
