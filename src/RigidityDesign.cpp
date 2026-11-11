@@ -1,7 +1,7 @@
 #include "../include/RigidityDesign.h"
 #include <cmath>
 
-constexpr double PI = 3.14159265358979323846;
+#define PI 3.14159265358979323846
 
 bool RigidityDesign::calculateRequiredDimensions(double T_max, double L, double G, double theta_max_deg, int hollowMode, double hollowVal, double& out_do, double& out_di) 
 {

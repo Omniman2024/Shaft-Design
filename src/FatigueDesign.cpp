@@ -29,13 +29,13 @@ bool FatigueDesign::calculateRequiredDimensions(double M_min, double M_max, doub
     };
 
     auto evalGoodman = [&](double d_o, double d_i) {
-        auto [sae, sme] = getStresses(d_o, d_i);
-        return (sae / mat.Se) + (sme / mat.Sut) - (1.0 / factorOfSafety);
+        auto stresses = getStresses(d_o, d_i);
+        return (stresses.first / mat.Se) + (stresses.second / mat.Sut) - (1.0 / factorOfSafety);
     };
 
     auto evalYield = [&](double d_o, double d_i) {
-        auto [sae, sme] = getStresses(d_o, d_i);
-        return ((sae + sme) / mat.Sy) - (1.0 / factorOfSafety);
+        auto stresses = getStresses(d_o, d_i);
+        return ((stresses.first + stresses.second) / mat.Sy) - (1.0 / factorOfSafety);
     };
 
     auto solve = [&](auto constraintFunc, double& res_do, double& res_di) -> bool {

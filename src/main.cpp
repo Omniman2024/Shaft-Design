@@ -58,7 +58,7 @@ int main() {
             }
             if (hollowMode == 1) hollowVal = getValidatedInput("Enter Inner Diameter (mm): ", 0.0);
             if (hollowMode == 2) hollowVal = getValidatedInput("Enter Outer Diameter (mm): ", 0.0);
-            if (hollowMode == 3) hollowVal = getValidatedInput("Enter Ratio (di/do, e.g., 0.6): ", 0.0);
+            if (hollowMode == 3) hollowVal = getValidatedInput("Enter Ratio (di/do): ", 0.0);
         }
 
         int mode;
@@ -116,7 +116,15 @@ int main() {
         
         double d_max = getValidatedInput("Enter Max Allowable Diameter (mm): ", 0.0);
         double theta_max = getValidatedInput("Enter Max Allowable Twist (degrees): ", 0.0);
-        
+        if(hollowMode == 3 && hollowVal >= 1){
+            std::cout << "\n!!! DESIGN REJECTED : MATH REJECT (instant structural collapse) !!!\n";
+            std::cout << "Reason: A hollow ratio (k) >= 1 requires an inner bore larger than the outer diameter. The shaft mathematically ceases to exist.\n";
+            std::cout << "Run another design? (y/n): ";
+            char choice;
+            std::cin >> choice;
+            if (choice == 'n' || choice == 'N') running = false;
+            continue;
+        }
         matDB.displayMaterials();
         std::cout << "Select Material ID from above: ";
         int mat_id;

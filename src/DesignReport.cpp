@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <string>
 
-constexpr double PI = 3.14159265358979323846;
+#define PI 3.14159265358979323846
 
 void DesignReport::generateReport(
     int mode, int shaftConf, int hollowMode, double L, 

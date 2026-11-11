@@ -2,7 +2,7 @@
 #include <cmath>
 #include <algorithm>
 
-constexpr double PI = 3.14159265358979323846;
+#define PI 3.14159265358979323846
 
 bool ASMEDesign::calculateRequiredDimensions(double M, double T, double P, double Kb, double Kt, bool hasKeyway, const Material& mat, int hollowMode, double hollowVal, double& out_do, double& out_di) 
 {
